@@ -73,17 +73,29 @@ void RRTWidget::saveObstacles() {
         cout << "Unable to write to file" << endl;
         return;
     }
-    QTextStream out(&file);
-    ObstacleGrid& grid = _stateSpace->obstacleGrid();
-    for (int j = 0; j < grid.discretizedHeight(); j++) {
-        for (int i = 0; i < grid.discretizedWidth(); i++) {
-            if (grid.obstacleAt(i, j)) {
-                out << '1';
-            } else {
-                out << '0';
-            }
-        }
-    }
+//    QTextStream out(&file);
+//    ObstacleGrid& grid = _stateSpace->obstacleGrid();
+//    for (int j = 0; j < grid.discretizedHeight(); j++) {
+//        for (int i = 0; i < grid.discretizedWidth(); i++) {
+//            if (grid.obstacleAt(i, j)) {
+//                out << '1';
+//            } else {
+//                out << '0';
+//            }
+//        }
+//    }
+    QTextStream mapstore(&file);
+    mapstore<<_biRRT->startState().x()<<" "<<_biRRT->startState().y()
+           <<" "<<_startVel.x()<<" "<<_startVel.y()<<'\n';
+    mapstore<<_biRRT->goalState().x()<<" "<<_biRRT->goalState().y()
+           <<" "<<_goalVel.x()<<" "<<_goalVel.y()<<'\n';
+    for(int i = 0 ; i<_stateSpace->obstacleGrid().discretizedWidth(); i++)
+      for(int j = 0; j<_stateSpace->obstacleGrid().discretizedHeight() ;j++)
+      {
+        mapstore<<i<<" "<<j<<" "<<_stateSpace->obstacleGrid().obstacleAt(i,j)<<'\n';
+      }
+
+
     cout << "Obstacles saved" << endl;
 }
 
@@ -98,22 +110,42 @@ void RRTWidget::loadObstacles() {
         return;
     }
 
-    QTextStream in(&file);
-    QString str = in.readLine();
-    QString::iterator iter = str.begin();
-    ObstacleGrid& grid = _stateSpace->obstacleGrid();
-    char c;
+//    QTextStream in(&file);
+//    QString str = in.readLine();
+//    QString::iterator iter = str.begin();
+//    ObstacleGrid& grid = _stateSpace->obstacleGrid();
+//    char c;
 
-    for (int j = 0; j < grid.discretizedHeight(); j++) {
-        for (int i = 0; i < grid.discretizedWidth(); i++) {
-            c = (iter++)->toLatin1();
-            if ('1' == c) {
-                grid.obstacleAt(i, j) = true;
-            } else if ('0' == c) {
-                grid.obstacleAt(i, j) = false;
-            }
-        }
+//    for (int j = 0; j < grid.discretizedHeight(); j++) {
+//        for (int i = 0; i < grid.discretizedWidth(); i++) {
+//            c = (iter++)->toLatin1();
+//            if ('1' == c) {
+//                grid.obstacleAt(i, j) = true;
+//            } else if ('0' == c) {
+//                grid.obstacleAt(i, j) = false;
+//            }
+//        }
+//    }
+
+    QTextStream mapread(&file);
+    int is_obstacle;
+    int wid, height;
+    float startx,starty, start_vel_x, start_vel_y;
+    float goalx, goaly, goal_vel_x, goal_vel_y;
+    mapread>>startx>>starty>>start_vel_x>>start_vel_y;
+    mapread>>goalx>>goaly>>goal_vel_x>>goal_vel_y;
+    while(!mapread.atEnd())
+    {
+      mapread>>wid>>height>>is_obstacle;
+      if(!mapread.atEnd())
+        _stateSpace->obstacleGrid().obstacleAt(wid , height) = is_obstacle;
     }
+    Eigen::Vector2d start(startx, starty);
+    Eigen::Vector2d goal(goalx, goaly);
+    _biRRT->setGoalState(goal);
+    _biRRT->setStartState(start);
+    _startVel = Vector2d(start_vel_x, start_vel_y);
+    _goalVel = Vector2d(goal_vel_x, goal_vel_y);
 
     update();
 }
